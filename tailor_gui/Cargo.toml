@@ -22,6 +22,9 @@ tracker = "0.2"
 relm4-icons = "0.9"
 clap = { version = "4.5.20", features = ["derive"] }
 
+# Add these lines to fix the "unresolved crate" errors:
+gtk = { package = "gtk4", version = "0.9" }
+adw = { package = "libadwaita", version = "0.7" }
 glib = "0.21"
 gio = "0.21"
 
