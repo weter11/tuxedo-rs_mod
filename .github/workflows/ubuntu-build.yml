@@ -134,7 +134,7 @@ jobs:
       - name: Prepare Debian package structure
         run: |
           # Extract version from workspace Cargo.toml
-          VERSION=$(grep -m 1 '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+          VERSION=$(grep -E '^\[workspace.package\]' -A 10 Cargo.toml | grep -E '^version\s*=' | head -n1 | cut -d'"' -f2)
           ARCH="amd64"
           PKG_DIR="tuxedo-rs_${VERSION}_${ARCH}"
           
