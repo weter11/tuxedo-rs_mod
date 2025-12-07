@@ -1,73 +1,167 @@
-#![allow(deprecated)]
-
-mod app;
-pub mod components;
+mod application;
 mod config;
-mod modals;
-mod setup;
-pub mod state;
-pub mod templates;
-pub mod util;
+mod window;
 
-// Phase 1 modules (already added)
+// Phase 1 modules
 pub mod profile_system;
 pub mod hardware_monitor;
 pub mod keyboard_control;
 
-// NEW - Phase 2 modules
+// Phase 2 modules
 pub mod hardware_control;
 pub mod profile_controller;
 
-use app::App;
-use clap::Parser;
-use gtk::prelude::ApplicationExt;
-use relm4::actions::{AccelsPlus, RelmAction, RelmActionGroup};
-use relm4::{gtk, main_application, RelmApp};
-use setup::setup;
+// Phase 3 modules - ADD THIS
+pub mod ui;
 
-use crate::config::APP_ID;
+use gtk::prelude::*;
+use gtk::{gio, Application};
+use adw;
 
-relm4::new_action_group!(AppActionGroup, "app");
-relm4::new_stateless_action!(QuitAction, AppActionGroup, "quit");
+const APP_ID: &str = "com.github.tuxedo.control";
 
-/// Tailord GUI (part of tuxedo-rs)
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct CliArgs {}
+fn main() -> glib::ExitCode {
+    // Initialize GTK
+    gtk::init().expect("Failed to initialize GTK");
+    
+    // Create application
+    let app = Application::builder()
+        .application_id(APP_ID)
+        .build();
 
-fn main() {
-    let _ = CliArgs::parse();
-    run_app()
+    // Connect startup signal
+    app.connect_startup(|_| {
+        adw::init().expect("Failed to initialize Libadwaita");
+        load_css();
+    });
+
+    // Connect activate signal
+    app.connect_activate(|app| {
+        // Check permissions
+        match crate::hardware_control::check_permissions() {
+            Ok(has_perms) => {
+                if !has_perms {
+                    show_permission_warning(app);
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to check permissions: {}", e);
+            }
+        }
+
+        // Create and show main window
+        let window = ui::main_window::MainWindow::new(app);
+        window.present();
+    });
+
+    // Setup actions
+    setup_actions(&app);
+
+    // Run application
+    app.run()
 }
 
-fn run_app() {
-    // Enable logging
-    tracing_subscriber::fmt()
-        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
-        .with_max_level(tracing::Level::INFO)
-        .init();
+fn load_css() {
+    let provider = gtk::CssProvider::new();
+    provider.load_from_data(
+        r#"
+        .badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .success {
+            background-color: @success_color;
+            color: @success_fg_color;
+        }
+        
+        .accent {
+            background-color: @accent_color;
+            color: @accent_fg_color;
+        }
+        "#
+    );
 
-    setup();
+    gtk::style_context_add_provider_for_display(
+        &gtk::gdk::Display::default().expect("Could not connect to display"),
+        &provider,
+        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+    );
+}
 
-    let app = main_application();
-    app.set_application_id(Some(APP_ID));
-    app.set_resource_base_path(Some("/com/github/aaronerhardt/Tailor/"));
+fn show_permission_warning(app: &Application) {
+    let dialog = adw::MessageDialog::new(
+        None::<&gtk::Window>,
+        Some("Limited Permissions"),
+        Some("The application is not running with root privileges. Hardware control features may not work correctly."),
+    );
+    dialog.add_response("ok", "OK");
+    dialog.add_response("restart", "Restart as Root");
+    dialog.set_response_appearance("restart", adw::ResponseAppearance::Suggested);
 
-    let quit_action = {
-        let app = app.clone();
-        RelmAction::<QuitAction>::new_stateless(move |_| {
-            app.quit();
-        })
-    };
+    let app_weak = app.downgrade();
+    dialog.connect_response(None, move |dialog, response| {
+        if response == "restart" {
+            // Show instructions for running as root
+            if let Some(app) = app_weak.upgrade() {
+                show_root_instructions(&app);
+            }
+        }
+        dialog.close();
+    });
 
-    let mut actions = RelmActionGroup::<AppActionGroup>::new();
-    actions.add_action(quit_action);
-    actions.register_for_main_application();
+    dialog.present();
+}
 
-    app.set_accelerators_for_action::<QuitAction>(&["<Control>q"]);
+fn show_root_instructions(app: &Application) {
+    let dialog = adw::MessageDialog::new(
+        None::<&gtk::Window>,
+        Some("Running as Root"),
+        Some("To enable hardware control, restart the application with:\n\nsudo tailor-gui\n\nOr use pkexec for a graphical authentication dialog."),
+    );
+    dialog.add_response("ok", "OK");
+    dialog.present();
+}
 
-    relm4_icons::initialize_icons();
+fn setup_actions(app: &Application) {
+    // About action
+    let about_action = gio::SimpleAction::new("about", None);
+    about_action.connect_activate(move |_, _| {
+        show_about_dialog();
+    });
+    app.add_action(&about_action);
 
-    let app = RelmApp::from_app(app).visible_on_activate(false);
-    app.run::<App>(());
+    // Preferences action
+    let preferences_action = gio::SimpleAction::new("preferences", None);
+    preferences_action.connect_activate(move |_, _| {
+        println!("Preferences clicked");
+        // TODO: Implement preferences dialog
+    });
+    app.add_action(&preferences_action);
+
+    // Quit action
+    let quit_action = gio::SimpleAction::new("quit", None);
+    quit_action.connect_activate(glib::clone!(@weak app => move |_, _| {
+        app.quit();
+    }));
+    app.add_action(&quit_action);
+    
+    app.set_accels_for_action("app.quit", &["<Ctrl>Q"]);
+}
+
+fn show_about_dialog() {
+    let about = adw::AboutWindow::builder()
+        .application_name("TUXEDO Control Center")
+        .application_icon("computer")
+        .version("0.3.0")
+        .developer_name("TUXEDO Community")
+        .issue_url("https://github.com/weter11/tuxedo-rs_mod/issues")
+        .website("https://github.com/weter11/tuxedo-rs_mod")
+        .copyright("© 2024 TUXEDO Community")
+        .license_type(gtk::License::Gpl20)
+        .build();
+
+    about.present();
 }
