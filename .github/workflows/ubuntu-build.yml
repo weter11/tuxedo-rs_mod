@@ -67,6 +67,17 @@ jobs:
           meson compile -C build
           ls -lh build/src/
 
+      - name: Build and install tailor_gui resources with Meson
+  run: |
+    cd tailor_gui
+    meson setup build --prefix=/usr -Dprofile=default
+    meson compile -C build
+    # Install to a temporary directory to capture all resources
+    DESTDIR=$PWD/install-root meson install -C build
+    ls -lh build/src/
+    # Show what was installed
+    find install-root -type f
+
       - name: Prepare tarball directory
         run: |
           mkdir -p tuxedo-rs-binaries/bin
@@ -149,6 +160,16 @@ jobs:
           mkdir -p ${PKG_DIR}/usr/share/metainfo
           mkdir -p ${PKG_DIR}/etc/dbus-1/system.d
           mkdir -p ${PKG_DIR}/lib/systemd/system
+    # Copy GUI resources (ADD THIS SECTION)
+    mkdir -p ${PKG_DIR}/usr/share/tailor_gui
+    if [ -f tailor_gui/install-root/usr/share/tailor_gui/resources.gresource ]; then
+      cp tailor_gui/install-root/usr/share/tailor_gui/resources.gresource ${PKG_DIR}/usr/share/tailor_gui/
+    fi
+    
+    # Copy other GUI resources from install-root
+    if [ -d tailor_gui/install-root/usr/share ]; then
+      cp -r tailor_gui/install-root/usr/share/* ${PKG_DIR}/usr/share/ || true
+    fi
           
           # Copy binaries
           cp target/release/tailord ${PKG_DIR}/usr/bin/
