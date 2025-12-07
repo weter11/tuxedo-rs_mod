@@ -60,28 +60,20 @@ jobs:
           cargo build --release
           ls -lh target/release/
 
-      - name: Build tailor_gui with Meson
+      - name: Build and install tailor_gui with Meson
         run: |
           cd tailor_gui
           meson setup build --prefix=/usr -Dprofile=default
           meson compile -C build
+          DESTDIR=$PWD/install-root meson install -C build
           ls -lh build/src/
 
-      - name: Build and install tailor_gui resources with Meson
-  run: |
-    cd tailor_gui
-    meson setup build --prefix=/usr -Dprofile=default
-    meson compile -C build
-    DESTDIR=$PWD/install-root meson install -C build
-    ls -lh build/src/
-    find install-root -type f
-
-- name: Prepare tarball directory
-  run: |
-    mkdir -p tuxedo-rs-binaries/bin
-    cp target/release/tailord tuxedo-rs-binaries/bin/
-    cp target/release/tailor tuxedo-rs-binaries/bin/
-    cp tailor_gui/build/src/tailor_gui tuxedo-rs-binaries/bin/
+      - name: Prepare tarball directory
+        run: |
+          mkdir -p tuxedo-rs-binaries/bin
+          cp target/release/tailord tuxedo-rs-binaries/bin/
+          cp target/release/tailor tuxedo-rs-binaries/bin/
+          cp tailor_gui/build/src/tailor_gui tuxedo-rs-binaries/bin/
           
       - name: Create installation README for tarball
         run: |
@@ -142,45 +134,32 @@ jobs:
           tar -czf tuxedo-rs-ubuntu-24.04.tar.gz tuxedo-rs-binaries/
           ls -lh tuxedo-rs-ubuntu-24.04.tar.gz
 
-- name: Prepare Debian package structure
-  run: |
-    # Extract version from workspace Cargo.toml
-    VERSION=$(grep -E '^\[workspace.package\]' -A 10 Cargo.toml | grep -E '^version\s*=' | head -n1 | cut -d'"' -f2)
-    ARCH="amd64"
-    PKG_DIR="tuxedo-rs_${VERSION}_${ARCH}"
-    
-    # Create directory structure
-    mkdir -p ${PKG_DIR}/DEBIAN
-    mkdir -p ${PKG_DIR}/usr/bin
-    mkdir -p ${PKG_DIR}/usr/share/applications
-    mkdir -p ${PKG_DIR}/usr/share/icons/hicolor/scalable/apps
-    mkdir -p ${PKG_DIR}/usr/share/glib-2.0/schemas
-    mkdir -p ${PKG_DIR}/usr/share/metainfo
-    mkdir -p ${PKG_DIR}/usr/share/tailor_gui
-    mkdir -p ${PKG_DIR}/etc/dbus-1/system.d
-    mkdir -p ${PKG_DIR}/lib/systemd/system
-    
-    # Copy binaries
-    cp target/release/tailord ${PKG_DIR}/usr/bin/
-    cp target/release/tailor ${PKG_DIR}/usr/bin/
-    cp tailor_gui/build/src/tailor_gui ${PKG_DIR}/usr/bin/
-    
-    # Copy GUI resources from meson install
-    if [ -d tailor_gui/install-root/usr/share ]; then
-      cp -r tailor_gui/install-root/usr/share/* ${PKG_DIR}/usr/share/ || true
-    fi
-    
-    # Rest of the existing code...
-    
-    # Copy other GUI resources from install-root
-    if [ -d tailor_gui/install-root/usr/share ]; then
-      cp -r tailor_gui/install-root/usr/share/* ${PKG_DIR}/usr/share/ || true
-    fi
+      - name: Prepare Debian package structure
+        run: |
+          # Extract version from workspace Cargo.toml
+          VERSION=$(grep -E '^\[workspace.package\]' -A 10 Cargo.toml | grep -E '^version\s*=' | head -n1 | cut -d'"' -f2)
+          ARCH="amd64"
+          PKG_DIR="tuxedo-rs_${VERSION}_${ARCH}"
+          
+          # Create directory structure
+          mkdir -p ${PKG_DIR}/DEBIAN
+          mkdir -p ${PKG_DIR}/usr/bin
+          mkdir -p ${PKG_DIR}/usr/share/applications
+          mkdir -p ${PKG_DIR}/usr/share/icons/hicolor/scalable/apps
+          mkdir -p ${PKG_DIR}/usr/share/glib-2.0/schemas
+          mkdir -p ${PKG_DIR}/usr/share/metainfo
+          mkdir -p ${PKG_DIR}/etc/dbus-1/system.d
+          mkdir -p ${PKG_DIR}/lib/systemd/system
+          mkdir -p ${PKG_DIR}/usr/share/tailor_gui
           
           # Copy binaries
           cp target/release/tailord ${PKG_DIR}/usr/bin/
           cp target/release/tailor ${PKG_DIR}/usr/bin/
           cp tailor_gui/build/src/tailor_gui ${PKG_DIR}/usr/bin/
+          # Copy GUI resources from meson install
+          if [ -d tailor_gui/install-root/usr/share ]; then
+            cp -r tailor_gui/install-root/usr/share/* ${PKG_DIR}/usr/share/
+          fi
           
           # Copy D-Bus configuration
           cp tailord/com.tux.Tailor.conf ${PKG_DIR}/etc/dbus-1/system.d/
