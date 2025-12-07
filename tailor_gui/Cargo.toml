@@ -2,7 +2,7 @@
 name = "tailor_gui"
 version = "0.3.0"
 authors = ["weter11"]
-edition = "2025"
+edition = "2021"
 publish = false
 description = "Tailord GUI (part of tuxedo-rs)"
 repository = "https://github.com/weter11/tuxedo-rs_mod"
