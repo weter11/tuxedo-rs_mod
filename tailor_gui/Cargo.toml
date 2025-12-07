@@ -1,11 +1,11 @@
 [package]
 name = "tailor_gui"
-version = "0.2.5"
-authors = ["Aaron Erhardt <aaron.erhardt@t-online.de>"]
-edition = "2021"
+version = "0.3.0"
+authors = ["weter11"]
+edition = "2025"
 publish = false
 description = "Tailord GUI (part of tuxedo-rs)"
-repository = "https://github.com/AaronErhardt/tuxedo-rs"
+repository = "https://github.com/weter11/tuxedo-rs_mod"
 
 [dependencies]
 futures = "0.3.31"
@@ -21,8 +21,18 @@ tracing-subscriber = "0.3"
 tracker = "0.2"
 relm4-icons = "0.9.0"
 clap = { version = "4.5.20", features = ["derive"] }
+
+# GTK4 and Libadwaita
+gtk = { version = "0.7", package = "gtk4", features = ["v4_10"] }
+libadwaita = { version = "0.5", package = "libadwaita", features = ["v1_4"] }
+glib = "0.18"
+gio = "0.18"
+
+# Phase 1 & 2 dependencies
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
-# NEW - Add for Phase 2
 libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3.8"
