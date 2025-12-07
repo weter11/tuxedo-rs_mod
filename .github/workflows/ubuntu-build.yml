@@ -133,7 +133,8 @@ jobs:
 
       - name: Prepare Debian package structure
         run: |
-          VERSION="0.2.5"
+          # Extract version from workspace Cargo.toml
+          VERSION=$(grep -m 1 '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
           ARCH="amd64"
           PKG_DIR="tuxedo-rs_${VERSION}_${ARCH}"
           
@@ -164,6 +165,7 @@ jobs:
           [Service]
           Type=dbus
           BusName=com.tux.Tailor
+          User=root
           ExecStart=/usr/bin/tailord
           Environment="RUST_BACKTRACE=1"
           
@@ -193,9 +195,9 @@ jobs:
           fi
           
           # Create control file
-          cat > ${PKG_DIR}/DEBIAN/control << 'EOFC'
+          cat > ${PKG_DIR}/DEBIAN/control << EOFC
           Package: tuxedo-rs
-          Version: 0.2.5
+          Version: ${VERSION}
           Section: utils
           Priority: optional
           Architecture: amd64
