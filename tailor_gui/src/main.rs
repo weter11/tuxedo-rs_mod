@@ -8,9 +8,15 @@ mod setup;
 pub mod state;
 pub mod templates;
 pub mod util;
+
+// Phase 1 modules (already added)
 pub mod profile_system;
 pub mod hardware_monitor;
 pub mod keyboard_control;
+
+// NEW - Phase 2 modules
+pub mod hardware_control;
+pub mod profile_controller;
 
 use app::App;
 use clap::Parser;
