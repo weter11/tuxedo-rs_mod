@@ -25,6 +25,8 @@ clap = { version = "4.5.20", features = ["derive"] }
 # Add these lines to fix the "unresolved crate" errors:
 gtk = { package = "gtk4", version = "0.9" }
 adw = { package = "libadwaita", version = "0.7" }
+glib = "0.20"
+gio = "0.20"
 
 # Phase 1 & 2 dependencies
 serde = { version = "1.0", features = ["derive"] }
