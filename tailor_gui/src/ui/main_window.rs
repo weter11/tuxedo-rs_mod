@@ -1,8 +1,8 @@
 // src/ui/main_window.rs
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Box, Orientation};
+use gtk::{Application, Box, Orientation};
 use adw::prelude::*;
-use adw::{TabBar, TabView, HeaderBar};
+use adw::{TabBar, TabView, ApplicationWindow, HeaderBar};
 use std::sync::{Arc, Mutex};
 use crate::profile_controller::ProfileController;
 use super::statistics_page::StatisticsPage;
