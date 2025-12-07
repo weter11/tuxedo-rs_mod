@@ -148,6 +148,7 @@ impl ProfilePage {
 
     fn setup_signals(&mut self, add_button: Button, edit_button: Button) {
         // Profile selection
+        let edit_button_for_click = edit_button.clone();
         let apply_button = self.apply_button.clone();
         let delete_button = self.delete_button.clone();
         let selected_index = Arc::clone(&self.selected_profile_index);
@@ -245,7 +246,7 @@ impl ProfilePage {
 
         // Edit button
         let widget = self.widget.clone();
-        edit_button.connect_clicked(move |_| {
+        edit_button_for_click.connect_clicked(move |_| {
             show_info_dialog(
                 &widget,
                 "Edit Profile",
