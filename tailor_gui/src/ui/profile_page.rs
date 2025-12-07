@@ -206,7 +206,7 @@ impl ProfilePage {
             if let Some(index) = *selected_index.lock().unwrap() {
                 // Show confirmation dialog
                 let dialog = adw::MessageDialog::new(
-                    widget.root().and_downcast_ref::<gtk::Window>().as_ref(),
+                    widget.root().and_downcast_ref::<gtk::Window>(),
                     Some("Delete Profile?"),
                     Some("This action cannot be undone."),
                 );
@@ -257,7 +257,7 @@ impl ProfilePage {
 
 fn show_error_dialog(widget: &Box, title: &str, message: &str) {
     let dialog = adw::MessageDialog::new(
-        widget.root().and_downcast_ref::<gtk::Window>().as_ref(),
+        widget.root().and_downcast_ref::<gtk::Window>(),
         Some(title),
         Some(message),
     );
@@ -267,7 +267,7 @@ fn show_error_dialog(widget: &Box, title: &str, message: &str) {
 
 fn show_info_dialog(widget: &Box, title: &str, message: &str) {
     let dialog = adw::MessageDialog::new(
-        widget.root().and_downcast_ref::<gtk::Window>().as_ref(),
+        widget.root().and_downcast_ref::<gtk::Window>(),
         Some(title),
         Some(message),
     );
