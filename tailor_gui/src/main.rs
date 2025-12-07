@@ -142,7 +142,7 @@ fn setup_actions(app: &Application) {
     // Quit action
     let quit_action = gio::SimpleAction::new("quit", None);
     quit_action.connect_activate(glib::clone!(@weak app => move |_, _| {
-        app.quit();
+        app.quit(); 
     }));
     app.add_action(&quit_action);
     
