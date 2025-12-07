@@ -8,6 +8,9 @@ mod setup;
 pub mod state;
 pub mod templates;
 pub mod util;
+pub mod profile_system;
+pub mod hardware_monitor;
+pub mod keyboard_control;
 
 use app::App;
 use clap::Parser;
