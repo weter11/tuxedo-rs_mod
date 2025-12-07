@@ -1,6 +1,4 @@
-mod application;
 mod config;
-mod window;
 
 // Phase 1 modules
 pub mod profile_system;
