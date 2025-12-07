@@ -12,6 +12,9 @@ pub mod profile_controller;
 // Phase 3 modules - ADD THIS
 pub mod ui;
 
+// Add this line to access MessageDialog methods like add_response
+use adw::prelude::*;
+
 use gtk::prelude::*;
 use gtk::{gio, Application};
 use adw;
@@ -141,9 +144,10 @@ fn setup_actions(app: &Application) {
 
     // Quit action
     let quit_action = gio::SimpleAction::new("quit", None);
-    quit_action.connect_activate(glib::clone!(@weak app => move |_, _| {
-        app.quit(); 
-    }));
+    // Make sure you have: use gtk::prelude::*; at the top of the file
+quit_action.connect_activate(glib::clone!(@weak app => move |_, _| {
+    app.quit();
+}));
     app.add_action(&quit_action);
     
     app.set_accels_for_action("app.quit", &["<Ctrl>Q"]);
