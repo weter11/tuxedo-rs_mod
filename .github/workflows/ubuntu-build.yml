@@ -70,7 +70,7 @@ jobs:
         run: |
           mkdir -p tuxedo-rs-binaries/bin
           cp target/release/tailord tuxedo-rs-binaries/bin/
-          cp target/release/tailor_cli tuxedo-rs-binaries/bin/
+          cp target/release/tailor tuxedo-rs-binaries/bin/
           cp tailor_gui/build/src/tailor_gui tuxedo-rs-binaries/bin/
           
       - name: Create installation README for tarball
@@ -83,7 +83,7 @@ jobs:
           ## Contents
           
           - `bin/tailord` - System daemon for hardware control
-          - `bin/tailor_cli` - Command-line interface tool
+          - `bin/tailor` - Command-line interface tool
           - `bin/tailor_gui` - GTK4/Libadwaita GUI application
           
           ## Installation
@@ -94,7 +94,7 @@ jobs:
           # Copy binaries to /usr/local/bin (requires sudo)
           sudo cp bin/* /usr/local/bin/
           sudo chmod +x /usr/local/bin/tailord
-          sudo chmod +x /usr/local/bin/tailor_cli
+          sudo chmod +x /usr/local/bin/tailor
           sudo chmod +x /usr/local/bin/tailor_gui
           ```
           
@@ -110,7 +110,7 @@ jobs:
           sudo tailord
           
           # Use the CLI
-          tailor_cli --help
+          tailor --help
           
           # Launch the GUI
           tailor_gui
@@ -150,7 +150,7 @@ jobs:
           
           # Copy binaries
           cp target/release/tailord ${PKG_DIR}/usr/bin/
-          cp target/release/tailor_cli ${PKG_DIR}/usr/bin/
+          cp target/release/tailor ${PKG_DIR}/usr/bin/
           cp tailor_gui/build/src/tailor_gui ${PKG_DIR}/usr/bin/
           
           # Copy D-Bus configuration
@@ -185,9 +185,13 @@ jobs:
             cp tailor_gui/build/data/com.github.aaronerhardt.Tailor.metainfo.xml ${PKG_DIR}/usr/share/metainfo/
           fi
           
-          # Copy icons if they exist
-          if [ -d tailor_gui/data/icons/hicolor ]; then
-            cp -r tailor_gui/data/icons/hicolor/* ${PKG_DIR}/usr/share/icons/hicolor/ || true
+          # Copy icons
+          mkdir -p ${PKG_DIR}/usr/share/icons/hicolor/scalable/apps
+          if [ -f tailor_gui/data/icons/com.github.aaronerhardt.Tailor.svg ]; then
+            cp tailor_gui/data/icons/com.github.aaronerhardt.Tailor.svg ${PKG_DIR}/usr/share/icons/hicolor/scalable/apps/
+          fi
+          if [ -f tailor_gui/data/icons/com.github.aaronerhardt.Tailor-symbolic.svg ]; then
+            cp tailor_gui/data/icons/com.github.aaronerhardt.Tailor-symbolic.svg ${PKG_DIR}/usr/share/icons/hicolor/scalable/apps/
           fi
           
           # Create control file
@@ -204,7 +208,7 @@ jobs:
            .
            This package includes:
             - tailord: System daemon for hardware control
-            - tailor_cli: Command-line interface tool
+            - tailor: Command-line interface tool
             - tailor_gui: GTK4/Libadwaita GUI application
           EOFC
           
