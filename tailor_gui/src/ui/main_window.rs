@@ -9,13 +9,15 @@ use super::improved_statistics_page::ImprovedStatisticsPage;
 use crate::improved_hardware_monitor::ImprovedHardwareMonitor;
 use super::profile_page::ProfilePage;
 use super::tuning_page::TuningPage;
+use super::settings_page::SettingsPage;
+use crate::daemon_manager::DaemonManager;
 
 pub struct MainWindow {
     pub window: ApplicationWindow,
 }
 
 impl MainWindow {
-    pub fn new(app: &Application) -> Self {
+    pub fn new(app: &Application, daemon_manager: Arc<Mutex<DaemonManager>>) -> Self {
         // Initialize controller
         let controller = match ProfileController::new() {
             Ok(ctrl) => Arc::new(Mutex::new(ctrl)),
@@ -26,11 +28,16 @@ impl MainWindow {
                 std::process::exit(1);
             }
         };
+                // Get controller from daemon manager
+        let controller = {
+            let dm = daemon_manager.lock().unwrap();
+            Arc::clone(&dm.profile_controller)
+        };
 
         // Create main window
         let window = ApplicationWindow::builder()
             .application(app)
-            .title("TUXEDO Control Center")
+            .title("TUXEDO/Clevo Control Center")
             .default_width(900)
             .default_height(650)
             .build();
@@ -72,14 +79,18 @@ impl MainWindow {
         let monitor = Arc::new(Mutex::new(
           ImprovedHardwareMonitor::new().expect("Failed to create monitor")
           ));
-        let statistics_page = ImprovedStatisticsPage::new(monitor);
+        // Create pages
+        let statistics_page = StatisticsPage::new(Arc::clone(&controller));
         let profile_page = ProfilePage::new(Arc::clone(&controller));
         let tuning_page = TuningPage::new(Arc::clone(&controller));
+        let settings_page = SettingsPage::new(Arc::clone(&daemon_manager));  // ADD THIS
 
         // Add pages to tab view
         tab_view.append(&statistics_page.widget).set_title("Statistics");
         tab_view.append(&profile_page.widget).set_title("Profiles");
         tab_view.append(&tuning_page.widget).set_title("Tuning");
+        tab_view.append(&settings_page.widget).set_title("Settings");  // ADD THIS
+
 
         window.set_content(Some(&main_box));
 
