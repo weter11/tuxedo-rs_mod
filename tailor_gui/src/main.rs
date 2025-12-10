@@ -1,7 +1,5 @@
 // src/main.rs - Phase 4.5 Updates
-mod application;
 mod config;
-mod window;
 
 // Phase 1 modules
 pub mod profile_system;
