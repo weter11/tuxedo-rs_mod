@@ -1013,3 +1013,5 @@ impl ImprovedHardwareMonitor {
                     }
                 }
             }
+         }
+       }
