@@ -460,7 +460,7 @@ impl ImprovedHardwareMonitor {
             scheduler: self.get_cpu_scheduler()?,
             profile: self.get_cpu_profile()?,
         })
-    }
+    
     
     /// Get CPU name from /proc/cpuinfo
     fn get_cpu_name(&self) -> Result<String> {
