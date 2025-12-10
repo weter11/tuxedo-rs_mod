@@ -5,7 +5,8 @@ use adw::prelude::*;
 use adw::{TabBar, TabView, ApplicationWindow, HeaderBar};
 use std::sync::{Arc, Mutex};
 use crate::profile_controller::ProfileController;
-use super::statistics_page::StatisticsPage;
+use super::improved_statistics_page::ImprovedStatisticsPage;
+use crate::improved_hardware_monitor::ImprovedHardwareMonitor;
 use super::profile_page::ProfilePage;
 use super::tuning_page::TuningPage;
 
