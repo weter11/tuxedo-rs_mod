@@ -69,7 +69,10 @@ impl MainWindow {
         main_box.append(&tab_view);
 
         // Create pages
-        let statistics_page = StatisticsPage::new(Arc::clone(&controller));
+        let monitor = Arc::new(Mutex::new(
+          ImprovedHardwareMonitor::new().expect("Failed to create monitor")
+          ));
+        let statistics_page = ImprovedStatisticsPage::new(monitor);
         let profile_page = ProfilePage::new(Arc::clone(&controller));
         let tuning_page = TuningPage::new(Arc::clone(&controller));
 
