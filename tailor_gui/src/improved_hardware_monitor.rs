@@ -419,7 +419,7 @@ impl ImprovedHardwareMonitor {
                 load_percent: load,
                 temperature: None,
             });
-        }
+        
         
         self.last_cpu_stats = Some(current_stats);
         
