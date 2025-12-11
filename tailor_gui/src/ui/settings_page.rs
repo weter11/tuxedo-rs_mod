@@ -182,9 +182,10 @@ impl SettingsPage {
     // Clone everything we need BEFORE creating closures
     let daemon_mgr_clone = Arc::clone(&self.daemon_manager);
     let status_label = self.status_label.clone();
-    
+
+    // 1. Fan daemon switch (Single definition)
     self.fan_daemon_switch.connect_state_set(move |_, enabled| {
-        let daemon_mgr = daemon_mgr_clone.lock().unwrap();  // Use the cloned Arc
+        let daemon_mgr = daemon_mgr_clone.lock().unwrap();
         
         if enabled {
             let ctrl = daemon_mgr.profile_controller.lock().unwrap();
@@ -201,31 +202,12 @@ impl SettingsPage {
         }
         
         glib::Propagation::Proceed
-    });
-        
-if enabled {
-    let ctrl = daemon_mgr.profile_controller.lock().unwrap();
-    let profile = ctrl.get_active_profile();
-    drop(ctrl);
-    
-    if let Err(e) = daemon_mgr.start_fan_daemon(profile) {
-                    eprintln!("Failed to start fan daemon: {}", e);
-                    status_label.set_text(&format!("Error: {}", e));
-                    return glib::Propagation::Stop;
-                }
-            } else {
-                daemon_mgr.stop_fan_daemon();
-            }
-            
-            glib::Propagation::Proceed
-        });
+    }); // <--- This correctly closes the first signal handler (Original Lines 186-200)
 
-        // App monitoring switch
-        let daemon_mgr = Arc::clone(&self.daemon_manager);
-        let status_label = self.status_label.clone();
-        
-        self.app_monitoring_switch.connect_state_set(move |_, enabled| {
-            // App monitoring switch
+    // 2. App monitoring switch (Cleanup the duplicate/nested handlers)
+    // You only need one definition for this signal handler.
+
+    // Prepare clones for the App monitoring switch handler
     let daemon_mgr_clone2 = Arc::clone(&self.daemon_manager);
     let status_label2 = self.status_label.clone();
     
@@ -243,45 +225,45 @@ if enabled {
         }
         
         glib::Propagation::Proceed
-    });
+    }); // <--- This correctly closes the second signal handler (Original Lines 223-238)
             
+    // The rest of the function (Refresh and Reset buttons) looks correct structurally.
 
-        // Refresh button
-        let page_self = SettingsPage {
-            widget: self.widget.clone(),
-            daemon_manager: Arc::clone(&self.daemon_manager),
-            fan_daemon_switch: self.fan_daemon_switch.clone(),
-            app_monitoring_switch: self.app_monitoring_switch.clone(),
-            minimize_to_tray_switch: self.minimize_to_tray_switch.clone(),
-            start_minimized_switch: self.start_minimized_switch.clone(),
-            status_label: self.status_label.clone(),
-        };
+    // Refresh button
+    let page_self = SettingsPage {
+        widget: self.widget.clone(),
+        daemon_manager: Arc::clone(&self.daemon_manager),
+        fan_daemon_switch: self.fan_daemon_switch.clone(),
+        app_monitoring_switch: self.app_monitoring_switch.clone(),
+        minimize_to_tray_switch: self.minimize_to_tray_switch.clone(),
+        start_minimized_switch: self.start_minimized_switch.clone(),
+        status_label: self.status_label.clone(),
+    };
 
-        refresh_button.connect_clicked(move |_| {
-            page_self.refresh_status();
+    refresh_button.connect_clicked(move |_| {
+        page_self.refresh_status();
+    });
+
+    // Reset button
+    let widget = self.widget.clone();
+    reset_button.connect_clicked(move |_| {
+        let dialog = adw::MessageDialog::new(
+            widget.root().and_downcast_ref::<gtk::Window>(),
+            Some("Reset Settings?"),
+            Some("This will restore all settings to their default values."),
+        );
+        dialog.add_response("cancel", "Cancel");
+        dialog.add_response("reset", "Reset");
+        dialog.set_response_appearance("reset", adw::ResponseAppearance::Destructive);
+
+        dialog.connect_response(None, move |dialog, response| {
+            if response == "reset" {
+                println!("Resetting to defaults...");
+                // TODO: Implement reset logic
+            }
+            dialog.close();
         });
 
-        // Reset button
-        let widget = self.widget.clone();
-        reset_button.connect_clicked(move |_| {
-            let dialog = adw::MessageDialog::new(
-    widget.root().and_downcast_ref::<gtk::Window>(),
-    Some("Reset Settings?"),
-    Some("This will restore all settings to their default values."),
-);
-            dialog.add_response("cancel", "Cancel");
-            dialog.add_response("reset", "Reset");
-            dialog.set_response_appearance("reset", adw::ResponseAppearance::Destructive);
-
-            dialog.connect_response(None, move |dialog, response| {
-                if response == "reset" {
-                    println!("Resetting to defaults...");
-                    // TODO: Implement reset logic
-                }
-                dialog.close();
-            });
-
-            dialog.present();
-        });
-    }
-
+        dialog.present();
+    });
+} // <--- Final closing brace for fn setup_signals
