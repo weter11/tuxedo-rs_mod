@@ -20,20 +20,15 @@ impl TrayManager {
 
     /// Initialize system tray (uses GNotification on modern desktops)
     pub fn setup(&mut self, app: &gtk::Application) {
-        // On modern Linux desktops (GNOME, KDE Plasma 6), we use GNotification
-        // which shows in the system status area
-        
-        // Create menu for tray
-        let menu = self.create_tray_menu();
-        app.set_app_menu(Some(&menu));
-
-        // Show initial notification
-        self.send_notification(
-            app,
-            "TUXEDO Control",
-            "Running in background. Click to open.",
-        );
-    }
+    // Create tray menu (GTK4 uses indicators differently)
+    // We'll use notifications and status icon approach
+    
+    self.send_notification(
+        app,
+        "TUXEDO Control",
+        "Running in background. Click to open.",
+    );
+}
 
     /// Create the tray menu with profile list
     fn create_tray_menu(&self) -> gio::Menu {
@@ -86,9 +81,8 @@ impl TrayManager {
 
     /// Update tray menu when profiles change
     pub fn refresh_menu(&self, app: &gtk::Application) {
-        let menu = self.create_tray_menu();
-        app.set_app_menu(Some(&menu));
-    }
+    // GTK4 doesn't use app menus - notifications only
+}
 
     /// Notify about profile switch
     pub fn notify_profile_switch(&self, app: &gtk::Application, profile_name: &str) {
