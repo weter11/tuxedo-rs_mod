@@ -25,6 +25,7 @@ pub mod single_instance;
 use gtk::prelude::*;
 use gtk::{gio, Application};
 use adw;
+use adw::prelude::MessageDialogExt;
 use std::sync::{Arc, Mutex};
 use crate::daemon_manager::DaemonManager;
 use crate::tray_manager::{TrayManager, setup_tray_actions};
