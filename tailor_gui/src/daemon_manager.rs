@@ -7,7 +7,7 @@ use crate::fan_daemon::FanDaemon;
 
 /// Manages all background daemon processes
 pub struct DaemonManager {
-    profile_controller: Arc<Mutex<ProfileController>>,
+    pub profile_controller: Arc<Mutex<ProfileController>>,  // Add 'pub'
     fan_daemon: Arc<Mutex<FanDaemon>>,
     app_monitoring_enabled: Arc<Mutex<bool>>,
 }
