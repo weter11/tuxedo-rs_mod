@@ -2,6 +2,7 @@
 use gtk::prelude::*;
 use gtk::{Box, Button, Label, Orientation, Switch};
 use adw::prelude::*;
+use adw::prelude::MessageDialogExt;
 use adw::{PreferencesGroup, ActionRow};
 use std::sync::{Arc, Mutex};
 use crate::daemon_manager::DaemonManager;
