@@ -194,13 +194,13 @@ if enabled {
     if let Err(e) = daemon_mgr.start_fan_daemon(profile) {
                     eprintln!("Failed to start fan daemon: {}", e);
                     status_label.set_text(&format!("Error: {}", e));
-                    return gtk::Inhibit(true);
+                    return glib::Propagation::Stop;
                 }
             } else {
                 daemon_mgr.stop_fan_daemon();
             }
             
-            gtk::Inhibit(false)
+            glib::Propagation::Proceed
         });
 
         // App monitoring switch
@@ -214,13 +214,13 @@ if enabled {
                 if let Err(e) = daemon_mgr.start_app_monitoring() {
                     eprintln!("Failed to start app monitoring: {}", e);
                     status_label.set_text(&format!("Error: {}", e));
-                    return gtk::Inhibit(true);
+                    return glib::Propagation::Stop;
                 }
             } else {
                 daemon_mgr.stop_app_monitoring();
             }
             
-            gtk::Inhibit(false)
+            glib::Propagation::Proceed
         });
 
         // Refresh button
