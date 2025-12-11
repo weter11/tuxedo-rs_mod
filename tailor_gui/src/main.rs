@@ -48,15 +48,13 @@ fn main() -> glib::ExitCode {
             
             // Show GTK dialog
             gtk::init().expect("Failed to initialize GTK");
-            let dialog = gtk::MessageDialog::new(
-                None::<&gtk::Window>,
-                gtk::DialogFlags::MODAL,
-                gtk::MessageType::Info,
-                gtk::ButtonsType::Ok,
-                "TUXEDO Control is already running.\n\nClick the system tray icon to show the window.",
-            );
-            dialog.run();
-            dialog.close();
+            let dialog = adw::MessageDialog::new(
+    None::<&gtk::Window>,
+    Some("Already Running"),
+    Some("TUXEDO Control is already running.\n\nClick the system tray icon to show the window."),
+);
+dialog.add_response("ok", "OK");
+dialog.present();
         }
         
         return glib::ExitCode::SUCCESS;
@@ -142,8 +140,8 @@ fn main() -> glib::ExitCode {
         
         window.window.connect_close_request(move |window| {
             // Just hide the window (minimize to tray)
-            window.hide();
-            gtk::Inhibit(true) // Prevent actual close
+            window.set_visible(false);
+            glib::Propagation::Stop
         });
 
         window.present();
@@ -182,26 +180,26 @@ extern "C" fn signal_handler(_: i32) {
 
 fn load_css() {
     let provider = gtk::CssProvider::new();
-    provider.load_from_data(
-        r#"
-        .badge {
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.8em;
-            font-weight: bold;
-        }
-        
-        .success {
-            background-color: @success_color;
-            color: @success_fg_color;
-        }
-        
-        .accent {
-            background-color: @accent_color;
-            color: @accent_fg_color;
-        }
-        "#
-    );
+    provider.load_from_string(
+    r#"
+    .badge {
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    
+    .success {
+        background-color: @success_color;
+        color: @success_fg_color;
+    }
+    
+    .accent {
+        background-color: @accent_color;
+        color: @accent_fg_color;
+    }
+    "#
+);
 
     gtk::style_context_add_provider_for_display(
         &gtk::gdk::Display::default().expect("Could not connect to display"),
