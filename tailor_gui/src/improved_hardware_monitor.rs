@@ -192,7 +192,7 @@ impl ImprovedHardwareMonitor {
                 if core_id < last_stats.len() && core_id < current_stats.len() {
                     Self::calculate_cpu_load(&last_stats[core_id], &current_stats[core_id])
                 } else {
-                    0.0
+                    0.0;
                 }
             }
         }
