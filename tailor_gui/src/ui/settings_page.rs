@@ -242,10 +242,10 @@ if enabled {
         let widget = self.widget.clone();
         reset_button.connect_clicked(move |_| {
             let dialog = adw::MessageDialog::new(
-                widget.root().and_downcast_ref::<gtk::Window>().as_ref(),
-                Some("Reset Settings?"),
-                Some("This will restore all settings to their default values. This action cannot be undone."),
-            );
+    widget.root().and_downcast_ref::<gtk::Window>(),
+    Some("Reset Settings?"),
+    Some("This will restore all settings to their default values."),
+);
             dialog.add_response("cancel", "Cancel");
             dialog.add_response("reset", "Reset");
             dialog.set_response_appearance("reset", adw::ResponseAppearance::Destructive);
