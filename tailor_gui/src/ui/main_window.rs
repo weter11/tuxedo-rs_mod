@@ -77,10 +77,9 @@ impl MainWindow {
 
         // Create pages
         let monitor = Arc::new(Mutex::new(
-          ImprovedHardwareMonitor::new().expect("Failed to create monitor")
-          ));
-        // Create pages
-        let statistics_page = StatisticsPage::new(Arc::clone(&controller));
+    ImprovedHardwareMonitor::new().expect("Failed to create monitor")
+));
+let statistics_page = ImprovedStatisticsPage::new(monitor);
         let profile_page = ProfilePage::new(Arc::clone(&controller));
         let tuning_page = TuningPage::new(Arc::clone(&controller));
         let settings_page = SettingsPage::new(Arc::clone(&daemon_manager));  // ADD THIS
