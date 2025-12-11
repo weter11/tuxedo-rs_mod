@@ -390,17 +390,17 @@ impl ImprovedStatisticsPage {
                 row += 1;
             }
 
-            if let Some(ref manufacturer) = battery.manufacturer {
-                grid.attach(&Label::new(Some("Manufacturer:")), 0, row, 1, 1);
-                grid.attach(&Label::new(Some(manufacturer)), 1, row, 1, 1);
-                row += 1;
-            }
+            if let Some(manufacturer) = &battery.manufacturer {
+    grid.attach(&Label::new(Some("Manufacturer:")), 0, row, 1, 1);
+    grid.attach(&Label::new(Some(manufacturer.as_str())), 1, row, 1, 1);
+    row += 1;
+}
 
-            if let Some(ref model) = battery.model {
-                grid.attach(&Label::new(Some("Model:")), 0, row, 1, 1);
-                grid.attach(&Label::new(Some(model)), 1, row, 1, 1);
-                row += 1;
-            }
+if let Some(model) = &battery.model {
+    grid.attach(&Label::new(Some("Model:")), 0, row, 1, 1);
+    grid.attach(&Label::new(Some(model.as_str())), 1, row, 1, 1);
+    row += 1;
+}
 
             if let (Some(start), Some(end)) = (battery.charge_start_threshold, battery.charge_end_threshold) {
                 grid.attach(&Label::new(Some("Charge Thresholds:")), 0, row, 1, 1);
@@ -499,7 +499,7 @@ impl ImprovedStatisticsPage {
     }
 
     fn start_update_loop(&self) {
-        let monitor = Arc::clone(&self.monitor);
+        let monitor: Arc<Mutex<ImprovedHardwareMonitor>> = Arc::clone(&self.monitor);
         let system_info = self.system_info_label.clone();
         let cpu_name = self.cpu_name_label.clone();
         let cpu_freq = self.cpu_median_freq_label.clone();
