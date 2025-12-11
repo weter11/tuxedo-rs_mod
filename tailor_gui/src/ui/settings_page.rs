@@ -202,7 +202,7 @@ impl SettingsPage {
         
         glib::Propagation::Proceed
     });
-        }
+        
 if enabled {
     let ctrl = daemon_mgr.profile_controller.lock().unwrap();
     let profile = ctrl.get_active_profile();
@@ -244,7 +244,7 @@ if enabled {
         
         glib::Propagation::Proceed
     });
-            }
+            
 
         // Refresh button
         let page_self = SettingsPage {
@@ -284,4 +284,4 @@ if enabled {
             dialog.present();
         });
     }
-}
+
