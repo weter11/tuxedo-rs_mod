@@ -98,8 +98,8 @@ impl MainWindow {
         window.connect_close_request(move |window| {
             // Check if minimize to tray is enabled
             // For now, just hide the window
-            glib::Propagation::Proceed
-            gtk::Inhibit(true)  // Prevent actual close
+            window.set_visible(false);
+            glib::Propagation::Stop
         });
         
         MainWindow { window }
