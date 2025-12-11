@@ -1,73 +1,293 @@
-#![allow(deprecated)]
-
-mod app;
-pub mod components;
+// src/main.rs - Phase 4.5 Updates
 mod config;
-mod modals;
-mod setup;
-pub mod state;
-pub mod templates;
-pub mod util;
 
-// Phase 1 modules (already added)
+// Phase 1 modules
 pub mod profile_system;
 pub mod hardware_monitor;
 pub mod keyboard_control;
 
-// NEW - Phase 2 modules
+// Phase 2 modules
 pub mod hardware_control;
 pub mod profile_controller;
 
-use app::App;
-use clap::Parser;
-use gtk::prelude::ApplicationExt;
-use relm4::actions::{AccelsPlus, RelmAction, RelmActionGroup};
-use relm4::{gtk, main_application, RelmApp};
-use setup::setup;
+// Phase 3 modules
+pub mod ui;
 
-use crate::config::APP_ID;
+// Phase 4 modules
+pub mod tray_manager;
+pub mod fan_daemon;
+pub mod daemon_manager;
 
-relm4::new_action_group!(AppActionGroup, "app");
-relm4::new_stateless_action!(QuitAction, AppActionGroup, "quit");
+// Phase 4.5 modules - NEW
+pub mod improved_hardware_monitor;
+pub mod single_instance;
 
-/// Tailord GUI (part of tuxedo-rs)
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct CliArgs {}
+use gtk::prelude::*;
+use gtk::{gio, Application};
+use adw;
+use adw::prelude::MessageDialogExt;
+use std::sync::{Arc, Mutex};
+use crate::daemon_manager::DaemonManager;
+use crate::tray_manager::{TrayManager, setup_tray_actions};
+use crate::profile_controller::ProfileController;
+use crate::single_instance::SingleInstance;
 
-fn main() {
-    let _ = CliArgs::parse();
-    run_app()
+const APP_ID: &str = "com.github.tuxedo.control";
+
+fn main() -> glib::ExitCode {
+    // Check for single instance
+    let mut instance_lock = SingleInstance::new(APP_ID).expect("Failed to create instance lock");
+    
+    if !instance_lock.try_acquire().expect("Failed to acquire lock") {
+        // Another instance is running
+        eprintln!("TUXEDO Control is already running");
+        
+        // Try to activate the existing instance
+        if let Err(e) = instance_lock.activate_running_instance() {
+            eprintln!("Failed to activate running instance: {}", e);
+            
+            // Show GTK dialog
+            gtk::init().expect("Failed to initialize GTK");
+            let dialog = adw::MessageDialog::new(
+    None::<&gtk::Window>,
+    Some("Already Running"),
+    Some("TUXEDO Control is already running.\n\nClick the system tray icon to show the window."),
+);
+dialog.add_response("ok", "OK");
+dialog.present();
+        }
+        
+        return glib::ExitCode::SUCCESS;
+    }
+    
+    // Initialize GTK
+    gtk::init().expect("Failed to initialize GTK");
+    
+    // Create application
+    let app = Application::builder()
+        .application_id(APP_ID)
+        .build();
+
+    // Store instance lock to be dropped when app closes
+    let instance_lock = Arc::new(Mutex::new(Some(instance_lock)));
+
+    // Connect startup signal
+    app.connect_startup(|_| {
+        adw::init().expect("Failed to initialize Libadwaita");
+        load_css();
+    });
+
+    // Connect activate signal
+    let instance_lock_clone = Arc::clone(&instance_lock);
+    app.connect_activate(move |app| {
+        // Check permissions
+        match crate::hardware_control::check_permissions() {
+            Ok(has_perms) => {
+                if !has_perms {
+                    show_permission_warning(app);
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to check permissions: {}", e);
+            }
+        }
+
+        // Initialize controller
+        let controller = match ProfileController::new() {
+            Ok(ctrl) => Arc::new(Mutex::new(ctrl)),
+            Err(e) => {
+                eprintln!("Failed to initialize ProfileController: {}", e);
+                show_error_dialog(app, "Initialization Error", &format!("Failed to initialize: {}", e));
+                return;
+            }
+        };
+
+        // Initialize daemon manager
+        let daemon_manager = match DaemonManager::new(Arc::clone(&controller)) {
+            Ok(dm) => Arc::new(Mutex::new(dm)),
+            Err(e) => {
+                eprintln!("Failed to initialize DaemonManager: {}", e);
+                show_error_dialog(app, "Daemon Error", &format!("Failed to initialize daemons: {}", e));
+                return;
+            }
+        };
+
+        // Start daemons
+        {
+            let dm = daemon_manager.lock().unwrap();
+            if let Err(e) = dm.start_all() {
+                eprintln!("Warning: Failed to start some daemons: {}", e);
+            }
+        }
+
+        // Initialize tray
+        let tray = Arc::new(Mutex::new(TrayManager::new(Arc::clone(&controller))));
+        {
+            let mut tray_ref = tray.lock().unwrap();
+            tray_ref.setup(app);
+        }
+
+        // Setup tray actions
+        setup_tray_actions(app, Arc::clone(&controller), Arc::clone(&tray));
+
+        // Create and show main window
+        let window = ui::main_window::MainWindow::new(app, Arc::clone(&daemon_manager));
+        
+        // Setup window close handler (minimize to tray)
+        let app_weak = app.downgrade();
+        let daemon_mgr_weak = Arc::downgrade(&daemon_manager);
+        let instance_lock_weak = Arc::downgrade(&instance_lock_clone);
+        
+        window.window.connect_close_request(move |window| {
+            // Just hide the window (minimize to tray)
+            window.set_visible(false);
+            glib::Propagation::Stop
+        });
+
+        window.present();
+    });
+
+    // Setup actions OUTSIDE the closure - daemon_manager is not accessible here
+// Remove these lines:
+// let daemon_manager_clone = daemon_manager.clone();
+// setup_actions(&app, daemon_manager_clone, instance_lock_clone);
+
+// Just call setup_actions without daemon_manager
+setup_actions(&app);
+
+    // Setup signal handlers for graceful shutdown
+    setup_signal_handlers(Arc::clone(&instance_lock));
+
+    app.run()
 }
 
-fn run_app() {
-    // Enable logging
-    tracing_subscriber::fmt()
-        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
-        .with_max_level(tracing::Level::INFO)
-        .init();
+fn setup_signal_handlers(instance_lock: Arc<Mutex<Option<SingleInstance>>>) {
+    // Handle SIGUSR1 to bring window to front
+    unsafe {
+        libc::signal(libc::SIGUSR1, signal_handler as libc::sighandler_t);
+    }
+}
 
-    setup();
+extern "C" fn signal_handler(_: i32) {
+    // Post to GTK main loop to show window
+    glib::idle_add_once(|| {
+        if let Some(app) = gtk::gio::Application::default() {
+            if let Some(app) = app.downcast_ref::<gtk::Application>() {
+                if let Some(window) = app.active_window() {
+                    window.present();
+                }
+            }
+        }
+    });
+}
 
-    let app = main_application();
-    app.set_application_id(Some(APP_ID));
-    app.set_resource_base_path(Some("/com/github/aaronerhardt/Tailor/"));
+fn load_css() {
+    let provider = gtk::CssProvider::new();
+    provider.load_from_string(
+    r#"
+    .badge {
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    
+    .success {
+        background-color: @success_color;
+        color: @success_fg_color;
+    }
+    
+    .accent {
+        background-color: @accent_color;
+        color: @accent_fg_color;
+    }
+    "#
+);
 
-    let quit_action = {
-        let app = app.clone();
-        RelmAction::<QuitAction>::new_stateless(move |_| {
-            app.quit();
-        })
-    };
+    gtk::style_context_add_provider_for_display(
+        &gtk::gdk::Display::default().expect("Could not connect to display"),
+        &provider,
+        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+    );
+}
 
-    let mut actions = RelmActionGroup::<AppActionGroup>::new();
-    actions.add_action(quit_action);
-    actions.register_for_main_application();
+fn show_permission_warning(app: &Application) {
+    let dialog = adw::MessageDialog::new(
+        None::<&gtk::Window>,
+        Some("Limited Permissions"),
+        Some("The application is not running with root privileges. Hardware control features may not work correctly."),
+    );
+    dialog.add_response("ok", "OK");
+    dialog.add_response("restart", "Restart as Root");
+    dialog.set_response_appearance("restart", adw::ResponseAppearance::Suggested);
 
-    app.set_accelerators_for_action::<QuitAction>(&["<Control>q"]);
+    let app_weak = app.downgrade();
+    dialog.connect_response(None, move |dialog, response| {
+        if response == "restart" {
+            if let Some(app) = app_weak.upgrade() {
+                show_root_instructions(&app);
+            }
+        }
+        dialog.close();
+    });
 
-    relm4_icons::initialize_icons();
+    dialog.present();
+}
 
-    let app = RelmApp::from_app(app).visible_on_activate(false);
-    app.run::<App>(());
+fn show_root_instructions(app: &Application) {
+    let dialog = adw::MessageDialog::new(
+        None::<&gtk::Window>,
+        Some("Running as Root"),
+        Some("To enable hardware control, restart the application with:\n\nsudo tailor-gui\n\nOr use pkexec for a graphical authentication dialog."),
+    );
+    dialog.add_response("ok", "OK");
+    dialog.present();
+}
+
+fn show_error_dialog(app: &Application, title: &str, message: &str) {
+    let dialog = adw::MessageDialog::new(
+        None::<&gtk::Window>,
+        Some(title),
+        Some(message),
+    );
+    dialog.add_response("ok", "OK");
+    dialog.present();
+}
+
+fn setup_actions(app: &Application) {
+    let about_action = gio::SimpleAction::new("about", None);
+    about_action.connect_activate(move |_, _| {
+        show_about_dialog();
+    });
+    app.add_action(&about_action);
+
+    let quit_action = gio::SimpleAction::new("quit", None);
+    quit_action.connect_activate(glib::clone!(@weak app => move |_, _| {
+        println!("Quitting application...");
+        
+        // Unload tailord service
+        let _ = std::process::Command::new("systemctl")
+            .args(&["--user", "stop", "tailord.service"])
+            .output();
+        
+        app.quit();
+    }));
+    app.add_action(&quit_action);
+    
+    app.set_accels_for_action("app.quit", &["<Ctrl>Q"]);
+}
+
+fn show_about_dialog() {
+    let about = adw::AboutWindow::builder()
+        .application_name("TUXEDO Control Center")
+        .application_icon("computer")
+        .version("0.4.5")
+        .developer_name("TUXEDO Community")
+        .issue_url("https://github.com/weter11/tuxedo-rs_mod/issues")
+        .website("https://github.com/weter11/tuxedo-rs_mod")
+        .copyright("© 2024 TUXEDO Community")
+        .license_type(gtk::License::Gpl20)
+        .build();
+
+    about.present();
 }
