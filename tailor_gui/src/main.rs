@@ -147,10 +147,13 @@ dialog.present();
         window.present();
     });
 
-    // Setup actions
-    let daemon_manager_clone = daemon_manager.clone();
-    let instance_lock_clone = Arc::clone(&instance_lock);
-    setup_actions(&app, daemon_manager_clone, instance_lock_clone);
+    // Setup actions OUTSIDE the closure - daemon_manager is not accessible here
+// Remove these lines:
+// let daemon_manager_clone = daemon_manager.clone();
+// setup_actions(&app, daemon_manager_clone, instance_lock_clone);
+
+// Just call setup_actions without daemon_manager
+setup_actions(&app);
 
     // Setup signal handlers for graceful shutdown
     setup_signal_handlers(Arc::clone(&instance_lock));
@@ -251,11 +254,7 @@ fn show_error_dialog(app: &Application, title: &str, message: &str) {
     dialog.present();
 }
 
-fn setup_actions(
-    app: &Application,
-    daemon_manager: Arc<Mutex<DaemonManager>>,
-    instance_lock: Arc<Mutex<Option<SingleInstance>>>,
-) {
+fn setup_actions {
     // About action
     let about_action = gio::SimpleAction::new("about", None);
     about_action.connect_activate(move |_, _| {
