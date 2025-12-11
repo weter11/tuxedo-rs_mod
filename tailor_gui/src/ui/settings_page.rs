@@ -267,3 +267,4 @@ impl SettingsPage {
         dialog.present();
     });
 } // <--- Final closing brace for fn setup_signals
+}
