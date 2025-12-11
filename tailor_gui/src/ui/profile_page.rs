@@ -2,6 +2,7 @@
 use gtk::prelude::*;
 use gtk::{Box, Button, Label, Orientation, ListBox, ScrolledWindow, Frame};
 use adw::prelude::*;
+use adw::prelude::MessageDialogExt;
 use adw::{ActionRow, PreferencesGroup};
 use std::sync::{Arc, Mutex};
 use crate::profile_controller::ProfileController;
