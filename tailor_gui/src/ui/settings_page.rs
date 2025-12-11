@@ -179,13 +179,29 @@ impl SettingsPage {
     }
 
     fn setup_signals(&self, refresh_button: Button, reset_button: Button) {
-        // Fan daemon switch
-        let daemon_mgr = Arc::clone(&self.daemon_manager);
-        let status_label = self.status_label.clone();
+    // Clone everything we need BEFORE creating closures
+    let daemon_mgr_clone = Arc::clone(&self.daemon_manager);
+    let status_label = self.status_label.clone();
+    
+    self.fan_daemon_switch.connect_state_set(move |_, enabled| {
+        let daemon_mgr = daemon_mgr_clone.lock().unwrap();  // Use the cloned Arc
         
-        self.fan_daemon_switch.connect_state_set(move |_, enabled| {
-            let daemon_mgr = self.daemon_manager.lock().unwrap();
-
+        if enabled {
+            let ctrl = daemon_mgr.profile_controller.lock().unwrap();
+            let profile = ctrl.get_active_profile();
+            drop(ctrl);
+            
+            if let Err(e) = daemon_mgr.start_fan_daemon(profile) {
+                eprintln!("Failed to start fan daemon: {}", e);
+                status_label.set_text(&format!("Error: {}", e));
+                return glib::Propagation::Stop;
+            }
+        } else {
+            daemon_mgr.stop_fan_daemon();
+        }
+        
+        glib::Propagation::Proceed
+    });
 if enabled {
     let ctrl = daemon_mgr.profile_controller.lock().unwrap();
     let profile = ctrl.get_active_profile();
@@ -208,20 +224,25 @@ if enabled {
         let status_label = self.status_label.clone();
         
         self.app_monitoring_switch.connect_state_set(move |_, enabled| {
-            let daemon_mgr = daemon_mgr.lock().unwrap();
-            
-            if enabled {
-                if let Err(e) = daemon_mgr.start_app_monitoring() {
-                    eprintln!("Failed to start app monitoring: {}", e);
-                    status_label.set_text(&format!("Error: {}", e));
-                    return glib::Propagation::Stop;
-                }
-            } else {
-                daemon_mgr.stop_app_monitoring();
+            // App monitoring switch
+    let daemon_mgr_clone2 = Arc::clone(&self.daemon_manager);
+    let status_label2 = self.status_label.clone();
+    
+    self.app_monitoring_switch.connect_state_set(move |_, enabled| {
+        let daemon_mgr = daemon_mgr_clone2.lock().unwrap();
+        
+        if enabled {
+            if let Err(e) = daemon_mgr.start_app_monitoring() {
+                eprintln!("Failed to start app monitoring: {}", e);
+                status_label2.set_text(&format!("Error: {}", e));
+                return glib::Propagation::Stop;
             }
-            
-            glib::Propagation::Proceed
-        });
+        } else {
+            daemon_mgr.stop_app_monitoring();
+        }
+        
+        glib::Propagation::Proceed
+    });
 
         // Refresh button
         let page_self = SettingsPage {
