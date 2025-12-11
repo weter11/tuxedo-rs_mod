@@ -184,16 +184,14 @@ impl SettingsPage {
         let status_label = self.status_label.clone();
         
         self.fan_daemon_switch.connect_state_set(move |_, enabled| {
-            let daemon_mgr = daemon_mgr.lock().unwrap();
-            
-            if enabled {
-                let ctrl = daemon_mgr.profile_controller.lock().unwrap();
-                let profile = ctrl.get_active_profile();
-                drop(ctrl);
-                drop(daemon_mgr);
-                
-                let daemon_mgr = daemon_mgr.lock().unwrap();
-                if let Err(e) = daemon_mgr.start_fan_daemon(profile) {
+            let daemon_mgr = self.daemon_manager.lock().unwrap();
+
+if enabled {
+    let ctrl = daemon_mgr.profile_controller.lock().unwrap();
+    let profile = ctrl.get_active_profile();
+    drop(ctrl);
+    
+    if let Err(e) = daemon_mgr.start_fan_daemon(profile) {
                     eprintln!("Failed to start fan daemon: {}", e);
                     status_label.set_text(&format!("Error: {}", e));
                     return gtk::Inhibit(true);
