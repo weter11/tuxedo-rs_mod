@@ -254,44 +254,18 @@ fn show_error_dialog(app: &Application, title: &str, message: &str) {
     dialog.present();
 }
 
-fn setup_actions {
-    // About action
+fn setup_actions(app: &Application) {
     let about_action = gio::SimpleAction::new("about", None);
     about_action.connect_activate(move |_, _| {
         show_about_dialog();
     });
     app.add_action(&about_action);
 
-    // Preferences action
-    let preferences_action = gio::SimpleAction::new("preferences", None);
-    preferences_action.connect_activate(move |_, _| {
-        println!("Preferences clicked");
-        // TODO: Implement preferences dialog
-    });
-    app.add_action(&preferences_action);
-
-    // Quit action - Stop daemons and exit
     let quit_action = gio::SimpleAction::new("quit", None);
-    let daemon_mgr = Arc::clone(&daemon_manager);
-    let instance = Arc::clone(&instance_lock);
     quit_action.connect_activate(glib::clone!(@weak app => move |_, _| {
         println!("Quitting application...");
         
-        // Stop all daemons
-        {
-            let dm = daemon_mgr.lock().unwrap();
-            dm.stop_all();
-        }
-        
-        // Release instance lock
-        {
-            let mut lock = instance.lock().unwrap();
-            if let Some(mut inst) = lock.take() {
-                inst.release();
-            }
-        }
-        
-        // Unload tailord service if running
+        // Unload tailord service
         let _ = std::process::Command::new("systemctl")
             .args(&["--user", "stop", "tailord.service"])
             .output();
